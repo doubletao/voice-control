@@ -1,0 +1,180 @@
+# 本地语音控制 PC
+
+全离线本地语音控制电脑，通过自然语言语音命令控制计算机。支持系统控制、应用控制、媒体控制，所有计算在本地完成，无需联网。
+
+## 功能特性
+
+- 📳 **唤醒词唤醒** - 待机 CPU 占用 <1%，说完唤醒词自动开始聆听
+- 🎤 **离线语音识别** - 基于 Vosk，全程本地识别，不联网
+- 🗣️ **语音反馈** - 使用 Windows 原生 TTS，安装即用
+- ⚙️ **配置化命令** - 所有命令通过 `commands.yaml` 配置，可自定义扩展
+- 🖥️ **系统托盘** - 后台运行，托盘图标管理，支持开机自启
+- ✅ **语音反馈文本可配置** - 每个命令的回复都可以在配置中修改
+
+## 支持的命令
+
+| 分类 | 命令示例 | 功能 |
+|------|---------|------|
+| 系统控制 | 调高音量/调低音量/静音 | 调节系统音量 |
+| 系统控制 | 截图 | 全屏截图保存到桌面 |
+| 系统控制 | 锁屏 | 锁定屏幕 |
+| 系统控制 | 关机/确认关机 | 关机（需二次确认） |
+| 系统控制 | 重启/确认重启 | 重启（需二次确认） |
+| 应用控制 | 打开浏览器 | 启动 Chrome |
+| 应用控制 | 打开记事本 | 启动记事本 |
+| 应用控制 | 关闭窗口 | 关闭当前窗口 (Alt+F4) |
+| 应用控制 | 切换窗口 | 切换窗口 (Alt+Tab) |
+| 媒体控制 | 播放暂停/下一首/上一首 | 媒体控制按键 |
+
+通过修改 `commands.yaml` 可以任意添加自定义命令。
+
+## 快速开始
+
+### 1. 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+> 如果你在安装 `pyaudio` 时遇到错误，可以试试：
+> ```bash
+> pip install pipwin
+> pipwin install pyaudio
+> ```
+
+### 2. 获取 Porcupine AccessKey
+
+1. 访问 [Picovoice Console](https://console.picovoice.ai/) 注册账号
+2. 获取你的 AccessKey（个人非商业使用免费）
+3. 编辑 `config.yaml`，填入：
+   ```yaml
+   access_key: "你的AccessKey在这里"
+   ```
+
+### 3. 生成唤醒词模型
+
+1. 在 [Picovoice Porcupine](https://picovoice.ai/platform/porcupine/) 训练你的唤醒词（比如"小白"、"你好电脑"）
+2. 下载得到 `.ppn` 模型文件
+3. 放到 `models/porcupine/` 目录
+4. 在 `config.yaml` 中修改路径：
+   ```yaml
+   wake_word:
+     model_path: "models/porcupine/你的模型.ppn"
+   ```
+
+### 4. 下载 Vosk 中文语音识别模型
+
+1. 下载 [vosk-model-small-cn-0.22](https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip) (约 50MB)
+2. 解压到 `models/vosk/` 目录
+3. 确保 `config.yaml` 中的路径正确：
+   ```yaml
+   model_paths:
+     vosk: "models/vosk/vosk-model-small-cn-0.22"
+   ```
+
+### 5. 运行
+
+**控制台模式（调试用）：**
+```bash
+python main.py
+```
+
+**系统托盘模式（后台运行）：**
+```bash
+python main.py --tray
+```
+
+### 6. 启用开机自启
+
+程序启动后：
+1. 右键点击系统托盘中的语音控制图标
+2. 点击 **设置开机自启** 即可
+3. 再次点击可取消开机自启
+
+## 项目结构
+
+```
+voice-control/
+├── main.py                  # 主入口，支持 --tray 参数后台运行
+├── config.yaml              # 全局配置
+├── commands.yaml            # 命令配置（包含语音反馈）
+├── requirements.txt         # Python 依赖
+├── modules/
+│   ├── audio_capture.py     # 麦克风采集
+│   ├── wake_word.py         # Porcupine 唤醒词检测
+│   ├── recognizer.py        # Vosk 语音识别 + 静音检测
+│   ├── command_parser.py    # 关键词匹配命令解析
+│   ├── action_executor.py   # 动作执行，PC控制
+│   ├── tts.py               # pyttsx3 语音合成
+│   └── tray.py              # 系统托盘 + 开机自启
+└── models/
+    ├── porcupine/           # 唤醒词模型
+    └── vosk/                # Vosk 中文模型
+```
+
+## 架构流程图
+
+```
+┌─────────────────────────────────────────────────────┐
+│               主控循环 (main.py)                      │
+└─────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│  音频采集模块    │────▶│  唤醒词检测模块  │  常驻后台，CPU <1%
+│  AudioCapture   │     │  Porcupine      │
+└─────────────────┘     └────────┬────────┘
+                                  │ 检测到唤醒词
+                                  ▼
+                        ┌─────────────────┐
+                        │  语音识别模块    │  录音 + 识别
+                        │  Vosk           │
+                        └────────┬────────┘
+                                  │ 识别文本
+                                  ▼
+                        ┌─────────────────┐
+                        │  命令解析模块    │  关键词匹配
+                        │  CommandParser  │
+                        └────────┬────────┘
+                                  │ 结构化命令
+                                  ▼
+                        ┌─────────────────┐
+                        │  动作执行模块    │  控制 PC
+                        │  ActionExecutor │
+                        └────────┬────────┘
+                                  │ 执行结果
+                                  ▼
+                        ┌─────────────────┐
+                        │  语音反馈模块    │  播报结果
+                        │  pyttsx3        │
+                        └─────────────────┘
+```
+
+## 添加自定义命令
+
+编辑 `commands.yaml`，在 `commands` 下添加：
+
+```yaml
+- name: open_calculator
+  keywords: ["打开计算器", "计算器"]
+  action: open_app
+  params:
+    app: "calc"
+  response: "已打开计算器"
+```
+
+添加后，在系统托盘右键点击 → **重载命令配置** 即可生效，不需要重启程序。
+
+## 性能指标
+
+| 指标 | 目标值 |
+|------|--------|
+| 待机内存 | <150MB |
+| 唤醒延迟 | <200ms |
+| 识别延迟 | <2s |
+| CPU 待机 | <2% |
+| CPU 识别峰值 | <30% |
+
+## 许可证
+
+个人非商业使用。

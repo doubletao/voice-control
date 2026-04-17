@@ -1,0 +1,122 @@
+# 命令配置
+# 每条命令包含:
+# - name: 命令唯一标识
+# - keywords: 匹配关键词列表，任意一个匹配成功即命中
+# - action: 执行的动作类型
+# - params: 动作参数
+# - response: 执行成功后的语音反馈文本（可配置化）
+
+commands:
+  # ===== 系统控制 =====
+  - name: volume_up
+    keywords: ["调高音量", "音量调高", "大一点", "大声一点", "音量大一点", "加大音量"]
+    action: volume_control
+    params:
+      direction: "up"
+      step: 10
+    response: "已调高音量"
+
+  - name: volume_down
+    keywords: ["调低音量", "音量调低", "小一点", "小声一点", "音量小一点", "减小音量"]
+    action: volume_control
+    params:
+      direction: "down"
+      step: 10
+    response: "已调低音量"
+
+  - name: toggle_mute
+    keywords: ["静音", "取消静音", "打开静音", "关闭静音", "音量静音"]
+    action: toggle_mute
+    params: {}
+    response: "{{status}}"
+
+  - name: screenshot
+    keywords: ["截图", "截屏", "屏幕截图"]
+    action: screenshot
+    params: {}
+    response: "截图已保存到桌面"
+
+  - name: lock_screen
+    keywords: ["锁屏", "锁定屏幕", "屏幕锁定"]
+    action: lock_screen
+    params: {}
+    response: "已锁定屏幕"
+
+  - name: shutdown_confirm
+    keywords: ["关机", "关闭电脑", "关闭计算机"]
+    action: shutdown
+    params:
+      confirm: false
+    response: "请确认是否关机"
+
+  - name: shutdown_yes
+    keywords: ["确认关机", "是的关机", "确定关机"]
+    action: shutdown
+    params:
+      confirm: true
+    response: "电脑即将关机"
+
+  - name: reboot_confirm
+    keywords: ["重启", "重启电脑", "重新启动"]
+    action: reboot
+    params:
+      confirm: false
+    response: "请确认是否重启"
+
+  - name: reboot_yes
+    keywords: ["确认重启", "是的重启", "确定重启"]
+    action: reboot
+    params:
+      confirm: true
+    response: "电脑即将重启"
+
+  # ===== 应用控制 =====
+  - name: open_browser
+    keywords: ["打开浏览器", "浏览器", "上网", "打开网页"]
+    action: open_app
+    params:
+      app: "chrome"
+    response: "已打开浏览器"
+
+  - name: open_notepad
+    keywords: ["打开记事本", "记事本", "打开笔记"]
+    action: open_app
+    params:
+      app: "notepad"
+    response: "已打开记事本"
+
+  - name: close_window
+    keywords: ["关闭窗口", "关闭当前窗口", "关掉窗口"]
+    action: close_window
+    params: {}
+    response: "已关闭窗口"
+
+  - name: switch_window
+    keywords: ["切换窗口", "下一个窗口", "切换应用"]
+    action: switch_window
+    params: {}
+    response: "已切换窗口"
+
+  # ===== 媒体控制 =====
+  - name: play_pause
+    keywords: ["播放暂停", "暂停播放", "播放", "暂停"]
+    action: play_pause
+    params: {}
+    response: ""
+
+  - name: next_track
+    keywords: ["下一首", "下一个", "下一曲"]
+    action: next_track
+    params: {}
+    response: ""
+
+  - name: previous_track
+    keywords: ["上一首", "上一个", "上一曲"]
+    action: previous_track
+    params: {}
+    response: ""
+
+# 默认响应配置
+default_responses:
+  unrecognized: "抱歉，我没听懂这个命令"
+  error: "执行出错了"

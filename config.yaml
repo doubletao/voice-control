@@ -1,0 +1,32 @@
+# 全局配置
+# 访问密钥，需要从 Picovoice Console 获取：https://console.picovoice.ai/
+access_key: "你的AccessKey在这里"
+
+# 唤醒词配置
+wake_word:
+  model_path: "models/porcupine/zh-cn-小白.ppn"
+  sensitivity: 0.5
+
+# 模型路径
+model_paths:
+  vosk: "models/vosk/vosk-model-small-cn-0.22"
+
+# 音频配置
+audio:
+  device_index: -1  # -1 = 默认麦克风
+  sample_rate: 16000
+  frame_length: 512
+
+# 录音配置
+recording:
+  silence_threshold: 500  # RMS 静音阈值
+  silence_duration: 1.5  # 连续静音多少秒视为结束
+  max_duration: 8.0  # 最大录音时长秒
+
+# TTS 配置 (pyttsx3，Windows 原生，不需要模型)
+tts:
+  enabled: true
+
+# 音量控制
+volume:
+  step: 10  # 每次调整步长

@@ -1,0 +1,29 @@
+# 唤醒词检测
+pvporcupine
+
+# 语音识别
+vosk
+
+# 语音合成 (Windows 原生，不需要模型)
+pyttsx3
+
+# 音频采集
+pyaudio
+
+# 键盘鼠标控制
+pyautogui
+
+# 系统信息/进程控制
+psutil
+
+# Windows 音量控制
+pycaw
+
+# 配置文件解析
+pyyaml
+
+# 系统托盘图标
+pystray
+
+# 图标处理
+Pillow
