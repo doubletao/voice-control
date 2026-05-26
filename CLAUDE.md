@@ -9,9 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 技术栈
 
 - **语言**: Python 3.10+
-- **唤醒词检测**: Porcupine (pvporcupine)
+- **唤醒词检测**: OpenWakeWord (openwakeword)
 - **语音识别**: Vosk 0.3.x (离线)
-- **语音合成**: Piper TTS (离线)
+- **语音合成**: pyttsx3 (Windows 原生)
 - **音频采集**: PyAudio 0.2.x
 - **PC 控制**: pyautogui + psutil + pycaw
 - **配置**: PyYAML
@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
          ▼
 ┌─────────────────┐     ┌─────────────────┐
 │  音频采集模块    │────▶│  唤醒词检测模块  │  常驻后台，CPU <1%
-│  AudioCapture   │     │  Porcupine      │
+│  AudioCapture   │     │  OpenWakeWord   │
 └─────────────────┘     └────────┬────────┘
                                   │ 检测到唤醒词
                                   ▼
@@ -50,7 +50,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
                                   ▼
                         ┌─────────────────┐
                         │  语音反馈模块    │  播报结果
-                        │  Piper TTS      │
+                        │  pyttsx3        │
                         └─────────────────┘
 ```
 
@@ -75,15 +75,14 @@ voice-control/
 ├── voice-control-design.md  # 技术方案文档
 ├── modules/
 │   ├── audio_capture.py     # 麦克风采集，音频流管理
-│   ├── wake_word.py         # 唤醒词检测（Porcupine 封装）
+│   ├── wake_word.py         # 唤醒词检测（OpenWakeWord 封装）
 │   ├── recognizer.py        # 语音识别（Vosk 封装）
 │   ├── command_parser.py    # 命令解析，关键词匹配
 │   ├── action_executor.py   # 动作执行，PC 控制
-│   └── tts.py               # 语音合成（Piper TTS 封装）
+│   ├── tts.py               # 语音合成（pyttsx3 封装）
+│   └── tray.py              # 系统托盘 + 开机自启
 └── models/
-    ├── porcupine/           # 唤醒词模型文件 (.ppn)
-    ├── vosk/                # Vosk 中文模型
-    └── piper/               # Piper 中文模型文件
+    └── vosk/                # Vosk 中文模型
 ```
 
 ## 常用命令
@@ -98,6 +97,9 @@ pipwin install pyaudio
 
 # 运行主程序
 python main.py
+
+# 系统托盘模式后台运行
+python main.py --tray
 ```
 
 ## 设计要点
@@ -126,17 +128,15 @@ commands:
 
 ## 重要注意事项
 
-1. **Porcupine AccessKey**：需要在 Picovoice Console 注册获取，个人非商业使用免费
+1. **唤醒词检测**：使用 OpenWakeWord，开箱即用，无需注册或 API Key
 2. **模型文件**：需要手动下载到 `models/` 目录：
    - vosk-model-small-cn-0.22 (~50MB)
-   - zh_CN-huayan-medium.onnx (~60MB)
 3. **关机/重启命令**：必须二次语音确认，防止误触
 4. **扩展方式**：新增命令只需修改 `commands.yaml`，无需修改代码
 
 ## 可扩展方向
 
-- 系统托盘图标 + 开机自启（pystray）
 - 命令词热更新（修改 yaml 无需重启）
 - 多唤醒词支持
 - 可替换为 faster-whisper tiny 提升识别率
-- 语音反馈文本可配置化
+- 训练自定义 OpenWakeWord 唤醒词模型

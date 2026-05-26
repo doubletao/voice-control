@@ -22,6 +22,8 @@ import sys
 import threading
 from typing import Optional
 
+import numpy as np
+
 from modules.audio_capture import AudioCapture
 from modules.wake_word import WakeWordDetector
 from modules.recognizer import SpeechRecognizer
@@ -37,7 +39,7 @@ class VoiceControlApp:
     # 状态定义
     STATE_IDLE = "IDLE"
     STATE_LISTENING = "LISTENING"
-    STATE_RECOGNIZING = "STATE_RECOGNIZING"
+    STATE_RECOGNIZING = "RECOGNIZING"
     STATE_EXECUTING = "EXECUTING"
     STATE_SPEAKING = "SPEAKING"
 
@@ -46,7 +48,8 @@ class VoiceControlApp:
         with open(config_path, 'r', encoding='utf-8') as f:
             self.config = yaml.safe_load(f)
 
-        # 当前状态
+        # 当前状态（需通过 _state_lock 保护）
+        self._state_lock = threading.Lock()
         self.state = self.STATE_IDLE
 
         # 初始化模块
@@ -54,6 +57,7 @@ class VoiceControlApp:
 
         # 控制标志
         self.running = True
+        self._stop_event = threading.Event()
 
         # 注册信号处理
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -81,15 +85,15 @@ class VoiceControlApp:
         # 唤醒词检测
         wake_word_cfg = self.config.get('wake_word', {})
         self.detector = WakeWordDetector(
-            access_key=self.config.get('access_key', ''),
-            model_path=wake_word_cfg.get('model_path', ''),
-            sensitivity=wake_word_cfg.get('sensitivity', 0.5)
+            model_name=wake_word_cfg.get('model_name', 'default'),
+            threshold=wake_word_cfg.get('threshold', 0.5)
         )
 
         # 语音识别
         self.recognizer = SpeechRecognizer(
             model_path=model_paths.get('vosk', ''),
             sample_rate=sample_rate,
+            frame_length=frame_length,
             silence_threshold=silence_threshold,
             silence_duration=silence_duration,
             max_duration=max_duration
@@ -121,39 +125,39 @@ class VoiceControlApp:
         """信号处理，退出"""
         print("\n[VoiceControlApp] 收到退出信号，正在停止...")
         self.running = False
+        self._stop_event.set()
 
     def _on_wake_word_detected(self) -> None:
         """唤醒词检测到的回调"""
-        if self.state != self.STATE_IDLE:
-            return
+        with self._state_lock:
+            if self.state != self.STATE_IDLE:
+                return
+            self.state = self.STATE_LISTENING
 
         print("\n[VoiceControlApp] ←↓↓↓ 唤醒词检测到，开始聆听 ↓↓↓→")
-        self.state = self.STATE_LISTENING
-        # 播放提示音？或者直接开始录音
         self.recognizer.start_recording(self._on_recording_completed)
-        # 播放唤醒提示音
-        self.tts.speak("我在")
+        # TTS 在独立线程播放，避免阻塞音频回调
+        threading.Thread(target=self.tts.speak, args=("我在",), daemon=True).start()
 
     def _on_recording_completed(self, text: str) -> None:
         """录音完成回调"""
-        self.state = self.STATE_RECOGNIZING
+        with self._state_lock:
+            self.state = self.STATE_RECOGNIZING
         print(f"[VoiceControlApp] 识别文本: '{text}'")
 
         # 解析命令
         parsed = self.parser.parse(text)
-        self.state = self.STATE_EXECUTING
+        with self._state_lock:
+            self.state = self.STATE_EXECUTING
         self._execute_command(parsed)
 
     def _execute_command(self, parsed: Optional[ParsedCommand]) -> None:
         """执行命令"""
-        self.state = self.STATE_EXECUTING
         response_text = ""
 
         if parsed is None:
-            # 未识别
             response_text = self.parser.get_default_response("unrecognized")
         else:
-            # 执行
             success, response = self.executor.execute(parsed)
             if not success:
                 response_text = self.parser.get_default_response("error")
@@ -162,21 +166,26 @@ class VoiceControlApp:
             else:
                 response_text = response
 
-        # 语音反馈
-        self.state = self.STATE_SPEAKING
+        # 语音反馈（TTS 阻塞，放在线程中执行）
+        with self._state_lock:
+            self.state = self.STATE_SPEAKING
+
         if response_text:
             print(f"[VoiceControlApp] 语音反馈: {response_text}")
-            self.tts.speak(response_text)
+            # 等待 TTS 播放完成后再返回待机
+            tts_done = threading.Event()
+            def _speak_and_signal():
+                self.tts.speak(response_text)
+                tts_done.set()
+            threading.Thread(target=_speak_and_signal, daemon=True).start()
+            tts_done.wait()
 
-        # 返回待机
         self._return_to_idle()
 
     def _return_to_idle(self) -> None:
         """返回待机状态"""
-        # 如果需要，这里可以卸载识别模型节省内存
-        # self.recognizer.unload_model()
-        # self.tts.unload()
-        self.state = self.STATE_IDLE
+        with self._state_lock:
+            self.state = self.STATE_IDLE
         print("\n[VoiceControlApp] 等待唤醒词...")
 
     def _audio_frame_callback(self, frame: np.ndarray) -> None:
@@ -184,14 +193,13 @@ class VoiceControlApp:
         if not self.running:
             return
 
-        if self.state == self.STATE_IDLE:
-            # 空闲状态，只做唤醒词检测
+        with self._state_lock:
+            current_state = self.state
+
+        if current_state == self.STATE_IDLE:
             self.detector.process_frame(frame)
-        elif self.state == self.STATE_LISTENING:
-            # 聆听状态，录音并检测是否结束
-            if self.recognizer.process_frame(frame):
-                # 录音结束，会在回调里处理后续
-                pass
+        elif current_state == self.STATE_LISTENING:
+            self.recognizer.process_frame(frame)
 
     def start(self) -> None:
         """启动应用"""
@@ -212,11 +220,10 @@ class VoiceControlApp:
         print("[VoiceControlApp] 已启动，等待唤醒词...")
         print()
 
-        # 主循环
+        # 主循环（Windows 兼容：用 Event 代替 signal.pause）
         try:
             while self.running:
-                # 所有工作都在回调里做，这里只需要保持进程运行
-                signal.pause()
+                self._stop_event.wait(timeout=1.0)
         except KeyboardInterrupt:
             pass
         finally:
@@ -226,9 +233,11 @@ class VoiceControlApp:
         """停止应用并清理"""
         print("[VoiceControlApp] 正在停止...")
 
+        self._stop_event.set()
         self.capture.stop()
         self.detector.stop()
         self.recognizer.stop_recording()
+        self.tts.stop()
 
         print("[VoiceControlApp] 已退出")
 

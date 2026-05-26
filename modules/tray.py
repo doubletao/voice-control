@@ -5,10 +5,12 @@
 
 import os
 import sys
-import winreg
 from PIL import Image, ImageDraw
 import pystray
 from typing import Callable, Optional
+
+if sys.platform == "win32":
+    import winreg
 
 
 class SystemTray:

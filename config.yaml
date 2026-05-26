@@ -1,11 +1,9 @@
 # 全局配置
-# 访问密钥，需要从 Picovoice Console 获取：https://console.picovoice.ai/
-access_key: "你的AccessKey在这里"
 
-# 唤醒词配置
+# 唤醒词配置（OpenWakeWord，开箱即用，无需注册）
 wake_word:
-  model_path: "models/porcupine/zh-cn-小白.ppn"
-  sensitivity: 0.5
+  model_name: "default"  # "default" 使用内置唤醒词，或指定 .onnx 模型文件路径
+  threshold: 0.5          # 检测阈值 (0-1)，越高越严格
 
 # 模型路径
 model_paths:

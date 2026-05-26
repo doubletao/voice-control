@@ -70,10 +70,17 @@ class TTS:
         except Exception as e:
             print(f"[TTS] 播放失败: {e}")
 
-    def unload(self) -> None:
-        """卸载引擎"""
+    def stop(self) -> None:
+        """停止并释放引擎"""
         if self._engine is not None:
-            del self._engine
+            try:
+                self._engine.stop()
+            except Exception:
+                pass
             self._engine = None
             self._is_loaded = False
-            print("[TTS] 引擎已卸载")
+            print("[TTS] 引擎已停止")
+
+    def unload(self) -> None:
+        """卸载引擎（兼容旧接口）"""
+        self.stop()

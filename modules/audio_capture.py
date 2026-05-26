@@ -40,9 +40,9 @@ class AudioCapture:
         self._callback = callback
         self._pa = pyaudio.PyAudio()
 
-        device_info = None
         if self.device_index is not None:
             device_info = self._pa.get_device_info_by_index(self.device_index)
+            print(f"[AudioCapture] 使用设备: [{self.device_index}] {device_info['name']}")
 
         self._stream = self._pa.open(
             format=pyaudio.paInt16,

@@ -14,7 +14,7 @@
          ▼
 ┌─────────────────┐     ┌─────────────────┐
 │  音频采集模块    │────▶│  唤醒词检测模块  │  常驻后台，CPU <1%
-│  AudioCapture   │     │  Porcupine      │
+│  AudioCapture   │     │  OpenWakeWord   │
 └─────────────────┘     └────────┬────────┘
                                   │ 检测到唤醒词
                                   ▼
@@ -38,7 +38,7 @@
                                   ▼
                         ┌─────────────────┐
                         │  语音反馈模块    │  播报结果
-                        │  Piper TTS      │
+                        │  pyttsx3        │
                         └─────────────────┘
 ```
 
@@ -48,9 +48,9 @@
 
 | 模块 | 技术方案 | 版本 | 理由 |
 |------|---------|------|------|
-| 唤醒词检测 | Porcupine (pvporcupine) | latest | 个人免费，CPU<1%，支持中文 |
+| 唤醒词检测 | OpenWakeWord (openwakeword) | latest | 开源免费，无需注册，CPU<1% |
 | 语音识别 | Vosk | 0.3.x | 离线，模型50MB，CPU可跑 |
-| 语音合成 | Piper TTS | latest | CPU优化，离线，中文音质好 |
+| 语音合成 | pyttsx3 | latest | Windows 原生引擎，无需模型，安装即用 |
 | 音频采集 | PyAudio | 0.2.x | 跨平台，低延迟 |
 | PC控制 | pyautogui + psutil | latest | 鼠标键盘+系统控制 |
 | 配置管理 | PyYAML | latest | 命令词可配置化 |
@@ -68,16 +68,15 @@ voice-control/
 │
 ├── modules/
 │   ├── audio_capture.py     # 麦克风采集，音频流管理
-│   ├── wake_word.py         # 唤醒词检测（Porcupine封装）
+│   ├── wake_word.py         # 唤醒词检测（OpenWakeWord 封装）
 │   ├── recognizer.py        # 语音识别（Vosk封装）
 │   ├── command_parser.py    # 命令解析，关键词匹配
 │   ├── action_executor.py   # 动作执行，PC控制
-│   └── tts.py               # 语音合成（Piper TTS封装）
+│   ├── tts.py               # 语音合成（pyttsx3 封装）
+│   └── tray.py              # 系统托盘 + 开机自启
 │
 └── models/
-    ├── porcupine/           # 唤醒词模型文件 (.ppn)
-    ├── vosk/                # Vosk中文模型（vosk-model-small-cn）
-    └── piper/               # Piper中文模型文件
+    └── vosk/                # Vosk中文模型（vosk-model-small-cn）
 ```
 
 ---
@@ -171,14 +170,16 @@ commands:
 
 ```txt
 # requirements.txt
-pvporcupine          # 唤醒词检测
+openwakeword         # 唤醒词检测（开源免费，无需注册）
 vosk                 # 语音识别
-piper-tts            # 语音合成
+pyttsx3              # 语音合成（Windows 原生）
 pyaudio              # 音频采集
 pyautogui            # 键盘鼠标控制
 psutil               # 系统信息/进程控制
 pycaw                # Windows 音量控制
 pyyaml               # 配置文件解析
+pystray              # 系统托盘图标
+Pillow               # 图标处理
 ```
 
 ---
@@ -187,15 +188,15 @@ pyyaml               # 配置文件解析
 
 | 模型 | 来源 | 大小 | 用途 |
 |------|------|------|------|
-| Porcupine 唤醒词模型 | Picovoice Console 生成 | ~1MB | 检测唤醒词 |
 | vosk-model-small-cn-0.22 | alphacephei.com | ~50MB | 中文语音识别 |
-| zh_CN-huayan-medium.onnx | Piper 官方 | ~60MB | 中文语音合成 |
+
+> OpenWakeWord 和 pyttsx3 均开箱即用，无需额外下载模型文件。
 
 ---
 
 ## 九、风险与注意事项
 
-1. **Porcupine 免费限制**：个人非商业使用免费，AccessKey 需在官网注册获取
+1. **OpenWakeWord 内置唤醒词**：默认提供 "hey jarvis" 等英文唤醒词，中文唤醒词需训练自定义模型
 2. **Vosk 中文识别率**：小模型识别率约 80-85%，命令词较短时影响不大；如不满意可换 faster-whisper tiny
 3. **PyAudio 安装**：Windows 下需要先安装 PortAudio，建议用预编译包 `pipwin install pyaudio`
 4. **关机/重启命令**：需加二次语音确认（"确认关机"），防止误触
@@ -205,9 +206,8 @@ pyyaml               # 配置文件解析
 
 ## 十、后续可扩展方向
 
-- [ ] 系统托盘图标 + 开机自启（pystray）
+- [x] 系统托盘图标 + 开机自启（pystray）
 - [ ] 命令词热更新（修改 yaml 无需重启）
-- [ ] 多唤醒词支持（"小助手"、"你好电脑"）
+- [ ] 训练中文自定义唤醒词模型（OpenWakeWord）
 - [ ] 识别率不满意时替换为 faster-whisper tiny
-- [ ] 语音反馈文本可配置化
-
+- [x] 语音反馈文本可配置化

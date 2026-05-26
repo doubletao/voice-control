@@ -11,7 +11,7 @@ import json
 
 
 class SpeechRecognizer:
-    def __init__(self, model_path: str, sample_rate: int = 16000,
+    def __init__(self, model_path: str, sample_rate: int = 16000, frame_length: int = 512,
                  silence_threshold: int = 500, silence_duration: float = 1.5, max_duration: float = 8.0):
         """
         初始化语音识别器
@@ -19,6 +19,7 @@ class SpeechRecognizer:
         Args:
             model_path: Vosk 模型目录路径
             sample_rate: 采样率
+            frame_length: 每帧采样点数
             silence_threshold: RMS 静音阈值，低于此值认为是静音
             silence_duration: 连续静音多少秒视为说话结束
             max_duration: 最大录音时长（秒），超时强制结束
@@ -37,8 +38,8 @@ class SpeechRecognizer:
         self._completed_callback: Optional[Callable[[str], None]] = None
 
         # 预计算需要多少静音帧
-        self._silence_frames_needed = int((silence_duration * sample_rate) / 512)
-        self._max_frames = int((max_duration * sample_rate) / 512)
+        self._silence_frames_needed = int((silence_duration * sample_rate) / frame_length)
+        self._max_frames = int((max_duration * sample_rate) / frame_length)
         self._frame_count = 0
 
         print(f"[SpeechRecognizer] 初始化完成，静音阈值={silence_threshold}, "

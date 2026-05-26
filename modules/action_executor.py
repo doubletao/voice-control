@@ -9,7 +9,6 @@ import subprocess
 import pyautogui
 import psutil
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-from comtypes import CLSCTX_ALL
 from datetime import datetime
 from typing import Optional, Tuple
 from .command_parser import ParsedCommand
@@ -32,9 +31,7 @@ class ActionExecutor:
         """初始化音量控制接口"""
         try:
             devices = AudioUtilities.GetSpeakers()
-            interface = devices.Activate(
-                IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-            self._volume_interface = interface.QueryInterface(IAudioEndpointVolume)
+            self._volume_interface = devices.EndpointVolume
             print("[ActionExecutor] 音量控制初始化成功")
         except Exception as e:
             print(f"[ActionExecutor] 音量控制初始化失败: {e}")
@@ -204,10 +201,9 @@ class ActionExecutor:
 
         try:
             if sys.platform == "win32":
-                # Windows 下直接启动
-                subprocess.Popen([cmd], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                os.startfile(cmd)
             else:
-                subprocess.Popen([cmd], shell=True)
+                subprocess.Popen([cmd])
             print(f"[ActionExecutor] 已启动应用: {cmd}")
             return True
         except Exception as e:

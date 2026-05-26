@@ -4,12 +4,12 @@
 
 ## 功能特性
 
-- 📳 **唤醒词唤醒** - 待机 CPU 占用 <1%，说完唤醒词自动开始聆听
-- 🎤 **离线语音识别** - 基于 Vosk，全程本地识别，不联网
-- 🗣️ **语音反馈** - 使用 Windows 原生 TTS，安装即用
-- ⚙️ **配置化命令** - 所有命令通过 `commands.yaml` 配置，可自定义扩展
-- 🖥️ **系统托盘** - 后台运行，托盘图标管理，支持开机自启
-- ✅ **语音反馈文本可配置** - 每个命令的回复都可以在配置中修改
+- **唤醒词唤醒** - 待机 CPU 占用 <1%，说完唤醒词自动开始聆听
+- **离线语音识别** - 基于 Vosk，全程本地识别，不联网
+- **语音反馈** - 使用 Windows 原生 TTS (pyttsx3)，安装即用
+- **配置化命令** - 所有命令通过 `commands.yaml` 配置，可自定义扩展
+- **系统托盘** - 后台运行，托盘图标管理，支持开机自启
+- **语音反馈文本可配置** - 每个命令的回复都可以在配置中修改
 
 ## 支持的命令
 
@@ -42,27 +42,7 @@ pip install -r requirements.txt
 > pipwin install pyaudio
 > ```
 
-### 2. 获取 Porcupine AccessKey
-
-1. 访问 [Picovoice Console](https://console.picovoice.ai/) 注册账号
-2. 获取你的 AccessKey（个人非商业使用免费）
-3. 编辑 `config.yaml`，填入：
-   ```yaml
-   access_key: "你的AccessKey在这里"
-   ```
-
-### 3. 生成唤醒词模型
-
-1. 在 [Picovoice Porcupine](https://picovoice.ai/platform/porcupine/) 训练你的唤醒词（比如"小白"、"你好电脑"）
-2. 下载得到 `.ppn` 模型文件
-3. 放到 `models/porcupine/` 目录
-4. 在 `config.yaml` 中修改路径：
-   ```yaml
-   wake_word:
-     model_path: "models/porcupine/你的模型.ppn"
-   ```
-
-### 4. 下载 Vosk 中文语音识别模型
+### 2. 下载 Vosk 中文语音识别模型
 
 1. 下载 [vosk-model-small-cn-0.22](https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip) (约 50MB)
 2. 解压到 `models/vosk/` 目录
@@ -72,7 +52,7 @@ pip install -r requirements.txt
      vosk: "models/vosk/vosk-model-small-cn-0.22"
    ```
 
-### 5. 运行
+### 3. 运行
 
 **控制台模式（调试用）：**
 ```bash
@@ -84,7 +64,7 @@ python main.py
 python main.py --tray
 ```
 
-### 6. 启用开机自启
+### 4. 启用开机自启
 
 程序启动后：
 1. 右键点击系统托盘中的语音控制图标
@@ -101,14 +81,13 @@ voice-control/
 ├── requirements.txt         # Python 依赖
 ├── modules/
 │   ├── audio_capture.py     # 麦克风采集
-│   ├── wake_word.py         # Porcupine 唤醒词检测
+│   ├── wake_word.py         # OpenWakeWord 唤醒词检测
 │   ├── recognizer.py        # Vosk 语音识别 + 静音检测
 │   ├── command_parser.py    # 关键词匹配命令解析
 │   ├── action_executor.py   # 动作执行，PC控制
 │   ├── tts.py               # pyttsx3 语音合成
 │   └── tray.py              # 系统托盘 + 开机自启
 └── models/
-    ├── porcupine/           # 唤醒词模型
     └── vosk/                # Vosk 中文模型
 ```
 
@@ -122,7 +101,7 @@ voice-control/
          ▼
 ┌─────────────────┐     ┌─────────────────┐
 │  音频采集模块    │────▶│  唤醒词检测模块  │  常驻后台，CPU <1%
-│  AudioCapture   │     │  Porcupine      │
+│  AudioCapture   │     │  OpenWakeWord   │
 └─────────────────┘     └────────┬────────┘
                                   │ 检测到唤醒词
                                   ▼
@@ -163,7 +142,7 @@ voice-control/
   response: "已打开计算器"
 ```
 
-添加后，在系统托盘右键点击 → **重载命令配置** 即可生效，不需要重启程序。
+添加后，在系统托盘右键点击 -> **重载命令配置** 即可生效，不需要重启程序。
 
 ## 性能指标
 
